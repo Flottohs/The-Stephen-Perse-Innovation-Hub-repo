@@ -1,0 +1,12 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="{{ url_for('static', filename='w3.css')}}"> 
+    </head>
+    <body>
+        <h1 style="background-color:#fbdfaa;text-align:center;text-shadow: 1px 1px 1px rgb(153, 85, 39);"> {{ is_sent }} Emails sent today: {{ no_emails_sent }} (hey, credits are expensive) </h1>
+        <form action="" method="POST">
+            <input type="text" name="getsinput" value="{{ request.form.get('getsinput', '') }}"">
+            <input type="submit" value="Send"> 
+        </form>
+    </body>
+</html>
