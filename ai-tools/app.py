@@ -11,11 +11,11 @@ CORS(app)
 # Initialize all tools at startup
 tool_instances = {
     'semantics': tools.SemanticsAnalyzer(),
-    # 'classifier': tools.ImageClassifier(),
+    'classifier': tools.ImageClassifier(),
     # 'summarizer': tools.TextSummarizer(),
-    # 'joke': tools.JokeGenerator(),
-    # 'haiku': tools.HaikuWriter(),
-    # 'explainer': tools.WhyExplainer()
+    'quest': tools.RPGQuestGenerator(),
+    'haiku': tools.HaikuWriter(),
+    'explainer': tools.WhyExplainer()
 }
 
 # Initialize models for all tools
@@ -38,7 +38,7 @@ def process():
         content = data.get('content')
         
         if tool_name not in tool_instances:
-            return jsonify({'error': 'Unknown tool'}), 400
+            return jsonify({'error': 'Unknown tool or tool not initialized'}), 400
         
         tool = tool_instances[tool_name]
         
@@ -47,6 +47,8 @@ def process():
             # Decode base64 image
             image_data = base64.b64decode(content.split(',')[1])
             image = Image.open(BytesIO(image_data))
+            # Ensure image is loaded and in RGB mode
+            image = image.convert('RGB')
             result = tool.process_query(image)
         else:
             result = tool.process_query(content)

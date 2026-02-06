@@ -135,8 +135,9 @@
         .tool-card[data-tool="summarizer"] { color: var(--accent-3); }
         .tool-card[data-tool="summarizer"]::before { background: var(--accent-3); }
 
-        .tool-card[data-tool="joke"] { color: var(--accent-4); }
-        .tool-card[data-tool="joke"]::before { background: var(--accent-4); }
+        /* CHANGED: 'joke' to 'quest' */
+        .tool-card[data-tool="quest"] { color: var(--accent-4); }
+        .tool-card[data-tool="quest"]::before { background: var(--accent-4); }
 
         .tool-card[data-tool="haiku"] { color: var(--accent-5); }
         .tool-card[data-tool="haiku"]::before { background: var(--accent-5); }
@@ -427,10 +428,10 @@
                 <span class="tool-input-type">text input</span>
             </div>
 
-            <div class="tool-card" data-tool="joke" data-input="text">
-                <span class="tool-icon">😄</span>
-                <div class="tool-name">Joke Generator</div>
-                <div class="tool-desc">Creates funny jokes about any topic</div>
+            <div class="tool-card" data-tool="quest" data-input="text">
+                <span class="tool-icon">⚔️</span>
+                <div class="tool-name">RPG Quest Generator</div>
+                <div class="tool-desc">Generates a video game quest based on a location</div>
                 <span class="tool-input-type">text input</span>
             </div>
 
@@ -473,7 +474,7 @@
             </div>
 
             <button class="process-btn" id="process-btn" onclick="processInput()">
-                <span id="btn-text">Run Tool</span>
+                <span id="btn-text">Submit</span>
             </button>
 
             <div class="results" id="results">
@@ -616,7 +617,7 @@
                 if (data.error) {
                     resultContent.textContent = `Error: ${data.error}`;
                 } else {
-                    resultContent.textContent = JSON.stringify(data.result, null, 2);
+                    resultContent.textContent = data.result;
                 }
 
                 results.classList.add('active');
@@ -625,7 +626,7 @@
                 results.classList.add('active');
             } finally {
                 btn.disabled = false;
-                btnText.textContent = 'Run Tool';
+                btnText.textContent = 'Submit';
             }
         }
     </script>

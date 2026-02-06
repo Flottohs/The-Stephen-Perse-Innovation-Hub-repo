@@ -1,3 +1,5 @@
+import transformers
+import torch 
 
 class SemanticsAnalyzer:
     """Analyzes the semantic meaning and emotions of text"""
@@ -6,19 +8,18 @@ class SemanticsAnalyzer:
         self.model = None
     
     def init_model(self):
-        from transformers import pipeline
         print("Loading sentiment analysis model...")
-        self.model = pipeline('sentiment-analysis', model='SamLowe/roberta-base-go_emotions', top_k=None)
+        self.model = transformers.pipeline('sentiment-analysis', model='SamLowe/roberta-base-go_emotions', top_k=None)
         print("✓ Sentiment model ready!")
     
     def process_query(self, text):
         output = self.model(text)[0]
         top_k = 5 
         
-        results = {}
+        results = ""
         
         for k in range(top_k):
-            results[output[k]['label']] = output[k]['score']
+            results += f"{output[k]['label']}, confidence: {round(output[k]['score'], 4)}\n"
             
         return results
         
@@ -29,27 +30,22 @@ class ImageClassifier:
         self.model = None
     
     def init_model(self):
-        from transformers import pipeline
         print("Loading image classification model...")
-        self.model = pipeline('image-classification', 
+        self.model = transformers.pipeline('image-classification', 
                             model='google/vit-base-patch16-224')
         print("✓ Image classifier ready!")
     
     def process_query(self, image):
         results = self.model(image)
-        top_result = results[0]
         
-        return {
-            'top_class': top_result['label'],
-            'confidence': round(top_result['score'], 3),
-            'top_5_predictions': [
-                {
-                    'label': r['label'],
-                    'confidence': round(r['score'], 3)
-                } for r in results[:5]
-            ],
-            'message': f"I'm {top_result['score']:.1%} sure this is: {top_result['label']}! 🎯"
-        }
+        label = results[0]['label']
+        confidence = round(results[0]['score'] * 100, 3)
+        secondary_label = results[1]['label']
+        secondary_confidence = round(results[1]['score'] * 100, 3)
+        
+        results = f"I am {confidence}% sure it is {label}, but it might also be {secondary_label}, which I am {secondary_confidence}% sure about"
+        
+        return results
         
 class TextSummarizer:
     """Summarizes long text into shorter versions"""
@@ -58,157 +54,129 @@ class TextSummarizer:
         self.model = None
     
     def init_model(self):
-        from transformers import pipeline
         print("Loading summarization model...")
-        self.model = pipeline('summarization', 
+        self.model = transformers.pipeline('summarization', 
                             model='facebook/bart-large-cnn')
         print("✓ Summarizer ready!")
     
     def process_query(self, text):
-        # BART works best with 50-1024 tokens
-        if len(text.split()) < 50:
-            return {
-                'summary': text,
-                'original_length': len(text.split()),
-                'summary_length': len(text.split()),
-                'reduction': '0%',
-                'message': 'Text is already short! No need to summarize. 📏'
-            }
-        
         # Generate summary
-        max_length = min(130, len(text.split()) // 2)
+        max_length = 200
         summary_result = self.model(text, 
-                                   max_length=max_length, 
-                                   min_length=30, 
-                                   do_sample=False)
+                                   max_length=80,
+                                    temperature=0.7,
+                                    top_k=50,
+                                    top_p=0.9,
+                                    repetition_penalty=1.5,
+                                    no_repeat_ngram_size=2,
+                                    do_sample=True,
+                                    pad_token_id=50256,
+                                    eos_token_id=50256)
         summary = summary_result[0]['summary_text']
         
         original_words = len(text.split())
         summary_words = len(summary.split())
         reduction = round((1 - summary_words / original_words) * 100)
         
-        return {
-            'summary': summary,
-            'original_length': original_words,
-            'summary_length': summary_words,
-            'reduction': f"{reduction}%",
-            'message': f"Compressed from {original_words} to {summary_words} words ({reduction}% reduction)! ✂️"
-        }
+        results = f'''Here you go!
+        {summary}
+        Original text: {original_words} words, Summary: {summary_words} words. That's a {reduction}% reduction!'''
         
-class JokeGenerator:
-    """Generates jokes based on a topic"""
-    
-    def __init__(self):
-        self.model = None
-        self.tokenizer = None
-    
-    def init_model(self):
-        from transformers import pipeline
-        print("Loading joke generator...")
-        self.model = pipeline('text-generation', 
-                            model='gpt2',
-                            max_length=100)
-        print("✓ Joke generator ready!")
-    
-    def process_query(self, topic):
-        prompt = f"Here's a funny joke about {topic}: "
-        
-        # Generate with some creativity
-        result = self.model(prompt, 
-                          max_length=80,
-                          num_return_sequences=1,
-                          temperature=0.8,
-                          do_sample=True)
-        
-        generated = result[0]['generated_text']
-        # Extract just the joke part
-        joke = generated.replace(prompt, '').strip()
-        
-        # If it's too short or weird, provide a fallback
-        if len(joke) < 20:
-            joke = f"Why did the {topic} cross the road? To get to the other side! (Classic!) 🐔"
-        
-        return {
-            'joke': joke,
-            'topic': topic,
-            'message': f"Here's a joke about {topic}! 🎭"
-        }
-        
+        return results
+
 class HaikuWriter:
-    """Writes haikus about any topic"""
-    
     def __init__(self):
-        self.model = None
-    
+        self.generator = None
+
     def init_model(self):
-        from transformers import pipeline
-        print("Loading haiku writer...")
-        self.model = pipeline('text-generation', 
-                            model='gpt2')
-        print("✓ Haiku writer ready!")
-    
+        self.generator = transformers.pipeline(
+            'text-generation',
+            model='HuggingFaceTB/SmolLM2-135M-Instruct',
+            device=-1 # CPU
+        )
+
     def process_query(self, topic):
-        prompt = f"Write a haiku about {topic}:\n"
-        
-        result = self.model(prompt, 
-                          max_length=60,
-                          num_return_sequences=1,
-                          temperature=0.7,
-                          do_sample=True)
-        
-        generated = result[0]['generated_text']
-        haiku = generated.replace(prompt, '').strip()
-        
-        # Extract first 3 lines
-        lines = haiku.split('\n')[:3]
-        haiku = '\n'.join(lines)
-        
-        # Fallback if generation fails
-        if len(lines) < 3:
-            haiku = f"{topic} whispers soft\nIn the gentle morning light\nPeace within my heart"
-        
-        return {
-            'haiku': haiku,
-            'topic': topic,
-            'message': f"A haiku about {topic} 🌸"
-        }
-        
+        # We use a chat-style template which this model understands perfectly
+        messages = [
+            {"role": "user",
+             "content": f"Write a short 3-line haiku about {topic}. No extra text."}
+        ]
+
+        # This model handles the prompt formatting for us
+        result = self.generator(
+            messages,
+            max_new_tokens=50,
+            do_sample=True,
+            temperature=0.7,
+            top_k=50,
+            top_p=0.95
+        )
+
+        # Extract only the assistant's response
+        haiku = result[0]['generated_text'][-1]['content']
+
+        return f"Here's a haiku about {topic}:\n{haiku}"
+    
+class RPGQuestGenerator:
+    """Generates a video game quest based on a location or theme"""
+
+    def __init__(self):
+        self.generator = None
+
+    def init_model(self):
+        self.generator = transformers.pipeline(
+            'text-generation',
+            model='HuggingFaceTB/SmolLM2-135M-Instruct',
+            device=-1 # CPU
+        )
+
+    def process_query(self, setting):
+        messages = [
+            {"role": "user",
+             "content": f"You are a Game Master. Write a short, single-sentence quest objective for a player (3rd-person grammar) in: {setting}."}
+        ]
+
+        result = self.generator(
+            messages,
+            max_new_tokens=60,
+            do_sample=True,
+            temperature=0.8, # Slightly higher for creativity
+            top_k=50,
+            top_p=0.95
+        )
+
+        # Extract only the assistant's response
+        quest = result[0]['generated_text'][-1]['content']
+
+        return f"⚔️ New Quest in [{setting}]:\n{quest}"
+    
 class WhyExplainer:
     """Explains 'why' something works the way it does"""
-    
+
     def __init__(self):
-        self.model = None
-    
+        self.generator = None
+
     def init_model(self):
-        from transformers import pipeline
-        print("Loading why explainer...")
-        self.model = pipeline('text-generation', 
-                            model='gpt2')
-        print("✓ Why explainer ready!")
-    
+        self.generator = transformers.pipeline(
+            'text-generation',
+            model='HuggingFaceTB/SmolLM2-135M-Instruct',
+            device=-1 # CPU
+        )
+
     def process_query(self, question):
-        # Format the question
-        if not question.lower().startswith('why'):
-            question = f"Why {question}"
-        
-        prompt = f"Question: {question}\nAnswer: "
-        
-        result = self.model(prompt, 
-                          max_length=150,
-                          num_return_sequences=1,
-                          temperature=0.7,
-                          do_sample=True)
-        
-        generated = result[0]['generated_text']
-        # Extract just the answer
-        answer = generated.replace(prompt, '').strip()
-        
-        # Get first complete sentence
-        sentences = answer.split('.')
-        explanation = sentences[0] + '.' if sentences else answer
-        
-        return {
-            'explanation': explanation,
-            'question': question,
-            'message': f"Here's an explanation! 💡"
-        }
+        messages = [
+            {"role": "user",
+             "content": f"Explain clearly and concisely: {question}"}
+        ]
+
+        result = self.generator(
+            messages,
+            max_new_tokens=200, # Increased for explanations
+            do_sample=True,
+            temperature=0.7,
+            top_k=50,
+            top_p=0.95
+        )
+
+        answer = result[0]['generated_text'][-1]['content']
+        return f"Here is an answer to your question: \n{answer}"
