@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio FFT Analyzer - CS Club</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .upload-section {
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .upload-box {
+            border: 3px dashed #cbd5e0;
+            border-radius: 10px;
+            padding: 40px;
+            background: #f7fafc;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .upload-box:hover {
+            border-color: #667eea;
+            background: #edf2f7;
+        }
+        
+        .upload-box input[type="file"] {
+            display: none;
+        }
+        
+        .upload-btn {
+            background: #667eea;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+        
+        .upload-btn:hover {
+            background: #5a67d8;
+        }
+        
+        .upload-btn:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+        }
+        
+        .results {
+            padding: 40px;
+            display: none;
+        }
+        
+        .results.active {
+            display: block;
+        }
+        
+        .info-box {
+            background: #edf2f7;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .info-box h3 {
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+        
+        .wave-container {
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .wave-item {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+        
+        .wave-item.selected {
+            border-color: #667eea;
+            background: #f7fafc;
+        }
+        
+        .wave-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .wave-header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .wave-checkbox {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+        }
+        
+        .wave-number {
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        
+        .frequency {
+            font-size: 1.3em;
+            color: #2d3748;
+            font-weight: bold;
+        }
+        
+        .equation {
+            background: #f7fafc;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 15px;
+            color: #4a5568;
+            border-left: 4px solid #667eea;
+        }
+        
+        .wave-plot img {
+            width: 100%;
+            border-radius: 5px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+        
+        .loading.active {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .error.active {
+            display: block;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .save-btn {
+            background: #48bb78;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .save-btn:hover {
+            background: #38a169;
+        }
+        
+        .mixer-panel {
+            background: #f7fafc;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            position: sticky;
+            top: 20px;
+            z-index: 10;
+        }
+        
+        .mixer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .mixer-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .play-btn {
+            background: #667eea;
+            color: white;
+            padding: 10px 25px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .play-btn:hover {
+            background: #5a67d8;
+        }
+        
+        .play-btn:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+        }
+        
+        .select-all-btn, .clear-btn {
+            background: #718096;
+            color: white;
+            padding: 8px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .select-all-btn:hover, .clear-btn:hover {
+            background: #4a5568;
+        }
+        
+        .selected-count {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎵 Audio FFT Analyzer</h1>
+            <p>Decompose any audio into its sine wave components using Fast Fourier Transform</p>
+        </div>
+        
+        <div class="upload-section" id="uploadSection">
+            <h2 style="margin-bottom: 20px;">Upload an Audio File</h2>
+            <p style="color: #718096; margin-bottom: 20px;">
+                Upload a .wav file (like "beep" or "oink") to see the top 30 sine waves that compose it
+            </p>
+            
+            <div class="upload-box" onclick="document.getElementById('audioFile').click()">
+                <div style="font-size: 3em; margin-bottom: 10px;">📁</div>
+                <p style="font-size: 1.2em; color: #4a5568;" id="fileName">Click to select audio file (.wav)</p>
+            </div>
+            
+            <input type="file" id="audioFile" accept=".wav" onchange="updateFileName(this)">
+            
+            <button class="upload-btn" id="analyzeBtn" onclick="analyzeAudio()" disabled>
+                Analyze Audio
+            </button>
+            
+            <div class="error" id="errorBox"></div>
+        </div>
+        
+        <div class="loading" id="loadingSection">
+            <div class="spinner"></div>
+            <h3>Analyzing audio file...</h3>
+            <p>Performing FFT and extracting sine wave components</p>
+        </div>
+        
+        <div class="results" id="resultsSection">
+            <h2 style="margin-bottom: 20px;">Analysis Results</h2>
+            
+            <div class="info-box">
+                <h3>📊 Audio Information</h3>
+                <p><strong>Sample Rate:</strong> <span id="sampleRate">-</span> Hz</p>
+                <p><strong>Components Found:</strong> Top 30 sine waves ordered by magnitude</p>
+            </div>
+            
+            <div class="mixer-panel">
+                <div class="mixer-header">
+                    <h3>🎚️ Audio Mixer</h3>
+                    <span class="selected-count">Selected: <span id="selectedCount">0</span> / 30</span>
+                </div>
+                <p style="margin-bottom: 15px; color: #4a5568;">
+                    Check the boxes to select sine waves, then click "Play Mixed Audio" to hear them combined!
+                </p>
+                <div class="mixer-controls">
+                    <button class="play-btn" id="playBtn" onclick="playMixedAudio()" disabled>
+                        ▶️ Play Mixed Audio
+                    </button>
+                    <button class="select-all-btn" onclick="selectAll()">Select All</button>
+                    <button class="clear-btn" onclick="clearSelection()">Clear Selection</button>
+                </div>
+            </div>
+            
+            <h3 style="margin-bottom: 15px;">Sine Wave Components:</h3>
+            <div class="wave-container" id="waveContainer">
+                <!-- Results will be inserted here -->
+            </div>
+            
+            <div class="action-buttons">
+                <button class="upload-btn" onclick="resetApp()">
+                    Analyze Another File
+                </button>
+                <button class="save-btn" onclick="saveResults()">
+                    💾 Save All Graphs & Equations (PDF)
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentAudio = null;
+        
+        function updateFileName(input) {
+            const fileName = input.files[0]?.name || 'Click to select audio file (.wav)';
+            document.getElementById('fileName').textContent = fileName;
+            document.getElementById('analyzeBtn').disabled = !input.files[0];
+        }
+        
+        async function analyzeAudio() {
+            const fileInput = document.getElementById('audioFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showError('Please select a file first');
+                return;
+            }
+            
+            // Show loading, hide others
+            document.getElementById('uploadSection').style.display = 'none';
+            document.getElementById('loadingSection').classList.add('active');
+            document.getElementById('resultsSection').classList.remove('active');
+            document.getElementById('errorBox').classList.remove('active');
+            
+            const formData = new FormData();
+            formData.append('audio_file', file);
+            
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                displayResults(data);
+                
+            } catch (error) {
+                document.getElementById('loadingSection').classList.remove('active');
+                document.getElementById('uploadSection').style.display = 'block';
+                showError('Error: ' + error.message);
+            }
+        }
+        
+        function displayResults(data) {
+            document.getElementById('loadingSection').classList.remove('active');
+            document.getElementById('resultsSection').classList.add('active');
+            
+            document.getElementById('sampleRate').textContent = data.sample_rate;
+            
+            const container = document.getElementById('waveContainer');
+            container.innerHTML = '';
+            
+            data.results.forEach((result, index) => {
+                const waveItem = document.createElement('div');
+                waveItem.className = 'wave-item';
+                waveItem.id = `wave-${index}`;
+                
+                waveItem.innerHTML = `
+                    <div class="wave-header">
+                        <div class="wave-header-left">
+                            <input type="checkbox" class="wave-checkbox" id="checkbox-${index}" onchange="updateSelection()">
+                            <span class="wave-number">#${index + 1}</span>
+                        </div>
+                        <span class="frequency">${result.frequency.toFixed(2)} Hz</span>
+                    </div>
+                    <div class="equation">${result.equation}</div>
+                    <div class="wave-plot">
+                        <img src="data:image/png;base64,${result.plot}" alt="Sine wave plot">
+                    </div>
+                `;
+                
+                container.appendChild(waveItem);
+            });
+            
+            updateSelection();
+        }
+        
+        function updateSelection() {
+            const checkboxes = document.querySelectorAll('.wave-checkbox');
+            let count = 0;
+            
+            checkboxes.forEach((checkbox, index) => {
+                const waveItem = document.getElementById(`wave-${index}`);
+                if (checkbox.checked) {
+                    waveItem.classList.add('selected');
+                    count++;
+                } else {
+                    waveItem.classList.remove('selected');
+                }
+            });
+            
+            document.getElementById('selectedCount').textContent = count;
+            document.getElementById('playBtn').disabled = count === 0;
+        }
+        
+        function selectAll() {
+            const checkboxes = document.querySelectorAll('.wave-checkbox');
+            checkboxes.forEach(checkbox => checkbox.checked = true);
+            updateSelection();
+        }
+        
+        function clearSelection() {
+            const checkboxes = document.querySelectorAll('.wave-checkbox');
+            checkboxes.forEach(checkbox => checkbox.checked = false);
+            updateSelection();
+        }
+        
+        async function playMixedAudio() {
+            const checkboxes = document.querySelectorAll('.wave-checkbox');
+            const selectedIndices = [];
+            
+            checkboxes.forEach((checkbox, index) => {
+                if (checkbox.checked) {
+                    selectedIndices.push(index);
+                }
+            });
+            
+            if (selectedIndices.length === 0) {
+                showError('Please select at least one sine wave');
+                return;
+            }
+            
+            const playBtn = document.getElementById('playBtn');
+            playBtn.disabled = true;
+            playBtn.textContent = '⏳ Generating audio...';
+            
+            try {
+                const response = await fetch('/mix-audio', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        selected_indices: selectedIndices
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Stop any currently playing audio
+                if (currentAudio) {
+                    currentAudio.pause();
+                    currentAudio = null;
+                }
+                
+                // Create and play audio
+                const audioBlob = base64ToBlob(data.audio_data, 'audio/wav');
+                const audioUrl = URL.createObjectURL(audioBlob);
+                currentAudio = new Audio(audioUrl);
+                
+                currentAudio.onended = () => {
+                    playBtn.textContent = '▶️ Play Mixed Audio';
+                    playBtn.disabled = false;
+                };
+                
+                currentAudio.play();
+                playBtn.textContent = '🔊 Playing...';
+                
+                // Re-enable button after playing starts
+                setTimeout(() => {
+                    if (currentAudio && !currentAudio.paused) {
+                        playBtn.disabled = false;
+                    }
+                }, 500);
+                
+            } catch (error) {
+                showError('Error generating audio: ' + error.message);
+                playBtn.textContent = '▶️ Play Mixed Audio';
+                playBtn.disabled = false;
+            }
+        }
+        
+        async function saveResults() {
+            try {
+                window.location.href = '/save-results';
+            } catch (error) {
+                showError('Error saving results: ' + error.message);
+            }
+        }
+        
+        function base64ToBlob(base64, contentType) {
+            const byteCharacters = atob(base64);
+            const byteArrays = [];
+            
+            for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+                const slice = byteCharacters.slice(offset, offset + 512);
+                const byteNumbers = new Array(slice.length);
+                
+                for (let i = 0; i < slice.length; i++) {
+                    byteNumbers[i] = slice.charCodeAt(i);
+                }
+                
+                const byteArray = new Uint8Array(byteNumbers);
+                byteArrays.push(byteArray);
+            }
+            
+            return new Blob(byteArrays, { type: contentType });
+        }
+        
+        function showError(message) {
+            const errorBox = document.getElementById('errorBox');
+            errorBox.textContent = message;
+            errorBox.classList.add('active');
+        }
+        
+        function resetApp() {
+            // Stop any playing audio
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+            
+            document.getElementById('uploadSection').style.display = 'block';
+            document.getElementById('resultsSection').classList.remove('active');
+            document.getElementById('audioFile').value = '';
+            document.getElementById('fileName').textContent = 'Click to select audio file (.wav)';
+            document.getElementById('analyzeBtn').disabled = true;
+        }
+    </script>
+</body>
+</html>
